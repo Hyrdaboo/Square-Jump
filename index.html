@@ -1,0 +1,328 @@
+<!doctype html>
+<html>
+ <head> 
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+html {
+  user-select:none;
+  font-family: Verdana;
+}
+canvas {
+    border:1px solid #373737;
+    background: radial-gradient(ellipse at top,#4d4d4d, #373737);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+p {
+   position: relative;
+   color: white;
+   text-shadow:1px 1px 5px white;
+   font-size: 3em;
+   font-weight: bold;
+   vertical-align: middle;
+   text-align:center;
+   margin-top: 0;
+}
+button {
+     border: 3px solid #262626;
+     outline:none;     
+     background: rgba(38,38,38,0.7);
+     font-size: 30px;
+     position:fixed;
+     bottom:5%;
+     padding-top:5%;
+     padding-bottom:5%;
+     padding-left:8%;
+     padding-right:8%;
+     font-weight: bold;
+     color: white; 
+}
+button:active{
+  background: rgba(38,38,38,1);
+}
+span {
+ position: relative;
+  color: white;
+  text-shadow:1px 1px 5px white;
+   font-size: 2em;
+   font-weight: bold;
+   vertical-align: middle;
+   text-align:center;
+   /*left: 15%;*/
+   margin-top: 50%;
+}
+@media(min-width:900px){
+    button{display:none}
+    #CT {
+    position: relative;
+    vertical-align: middle;
+    text-align:center;
+    font-weight: bold;
+    font-size: 20px;
+    color: orange;
+    display: block;    
+    animation:fade 9s 1;
+}
+@keyframes fade{
+    from{opacity:1;}  
+    to{opacity:0;}  
+};
+}
+#splashScreen {
+				position:fixed;
+				vertical-align:middle;
+				background: black;
+				height: 100%;
+			 left:0;
+			 top:0;
+			 width:100%;
+				z-index:99;												
+}
+#myImg{
+		width: 300px;
+}
+@keyframes fadeout{
+	from{opacity:1}			
+	to{opacity:0}
+}
+</style> 
+ </head> 
+ <body onload="startGame()">   
+ 	 <div id="splashScreen"><img id="myImg" src="splash.png" alt="splash" style="position:absolute;animation: fadeout 4s 1;top:20%;"></div>
+  <p id="score">0</p> 
+  <span id="gameLoader" onclick="loadGame()"></span><br>
+  <div id="CT">Use arrows to move</div>
+  <button style="left:5%;" onmousedown="moveleft()" onmouseup="clearmove()" ontouchstart="moveleft()" ontouchend="clearmove()"><i class="fa fa-arrow-left"></i></button> 
+  <button style="right:5%;" onmousedown="moveright()" onmouseup="clearmove()" ontouchstart="moveright()" ontouchend="clearmove()"><i class="fa fa-arrow-right"></i></button> 
+  <script>
+  setTimeout(function () {
+  document.getElementById("CT").style.display = 'none';  
+  }, 6000);
+setTimeout(function () {
+  document.getElementById("splashScreen").style.display = 'none';  
+  }, 2000); 
+document.getElementById("myImg").style.left =  (window.innerWidth - window.innerWidth/2 - 150) + "px";
+var myGamePiece;
+var object = [];
+var lava;
+var dead = false;
+var block;
+var score = document.getElementById("score");
+var c = 0;
+var loadG = document.getElementById("gameLoader");
+var corpse = false;
+var requestG = true;
+var accP = 0;
+
+function startGame() {
+     myGamePiece = new component(40, 40, "#0042ff", window.innerWidth - window.innerWidth/2-20, window.innerHeight - 400);
+    lava = new component(window.innerWidth, 100, "#ff5e00", 0, 0);
+    block = new component(60, 10, "#0042ff", window.innerWidth - window.innerWidth/2-30, window.innerHeight - 300);
+    loadG.style.display = "none";
+    myGameArea.start();
+}
+
+var myGameArea = {
+    canvas : document.createElement("canvas"),
+    start : function() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.context = this.canvas.getContext("2d");
+        document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+        this.interval = setInterval(updateGameArea, 20);
+window.addEventListener('keydown', function (e) {
+    myGameArea.keys = (myGameArea.keys || []);
+    myGameArea.keys[e.keyCode] = true;
+    })
+    window.addEventListener('keyup', function (e) {
+      myGameArea.keys[e.keyCode] = false;
+    })
+    },
+    clear : function() {
+        this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+}
+
+function component(width, height, color, x, y, type) {
+    this.width = width;
+    this.height = height;
+    this.speedX = 0;
+    this.speedY = 0;
+    this.type = type;
+    this.gravity = 0.2;
+    this.accelerate = 0;
+    this.gravitySpeed = 0;  
+    this.x = x;
+    this.y = y;    
+    this.update = function() {
+        ctx = myGameArea.context;        
+          ctx.shadowBlur = 30;
+          ctx.shadowColor = color;          
+          ctx.fillStyle = color;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+    this.newPos = function() {
+    this.gravitySpeed += this.gravity;
+    this.accelerate += this.speedX;
+        this.x += this.speedX + this.accelerate;
+        this.y += this.speedY + this.gravitySpeed;
+        this.hitBottom();     
+    }
+
+this.crashWith = function(otherobj) {
+    var myleft = this.x;
+    var myright = this.x + (this.width);
+    var mytop = this.y;
+    var mybottom = this.y + (this.height);
+    var otherleft = otherobj.x;
+    var otherright = otherobj.x + (otherobj.width);
+    var othertop = otherobj.y;
+    var otherbottom = otherobj.y + (otherobj.height);
+    var crash = true;
+    if ((mybottom < othertop) ||
+    (mytop > otherbottom) ||
+    (myright < otherleft) ||
+    (myleft > otherright)) {
+      crash = false;
+    }
+    return crash;
+  }
+
+this.boxColliding = function(obj) {
+var objTop = obj.y;
+var objBottom = obj.y + (obj.height);
+var objLeft = obj.x;
+var objRight = obj.x + (obj.width);
+var top = this.y;
+var bottom = this.y + (this.height);
+var left = this.x;
+var right = this.x + (this.width);
+
+if(bottom > objTop && left < objRight-10 && right > objLeft+10 && top < objTop   && Math.abs(myGamePiece.speedY) < Math.abs(myGamePiece.gravitySpeed)) {        
+         this.speedY = -6;
+         this.gravitySpeed = 0;
+         this.y = (objTop - this.height);
+         var jump = new Audio("jump.wav");
+         jump.play();
+        }
+   }
+    this.hitBottom = function() {
+    var rightwall = myGameArea.canvas.width - this.width;
+    if (this.x > rightwall) {
+      this.x = rightwall;
+      this.accelerate = 0;
+    }
+    var leftwall = myGameArea.canvas.width - myGameArea.canvas.width;
+    if (this.x < leftwall) {
+      this.x = leftwall;
+      this.accelerate = 0;
+    }    
+  }
+}
+
+function loadGame() {
+  clearInterval(myGameArea.interval);
+  object = [];
+  c = 0;
+  score.textContent = c;
+  dead = false;
+  corpse = false;
+  requestG = false;
+  startGame();
+}
+
+function force() {
+  if(myGamePiece.speedX == 0) {       
+     if(myGamePiece.accelerate > 0) {
+      myGamePiece.accelerate -= 0.1;
+     }  
+     else if(myGamePiece.accelerate < 0) {
+      myGamePiece.accelerate += 0.1;
+     }
+     if(myGamePiece.accelerate < 0.5 && myGamePiece.accelerate > -0.5) {
+         myGamePiece.accelerate = 0;
+     }
+    }
+}
+
+function updateGameArea() {
+if(myGamePiece.y > lava.y && lava.y != 0) {        
+        loadG.style.display = "block";
+        loadG.textContent = "Restart";
+        loadG.style.marginTop = (window.innerHeight/2) + "px";
+        dead = true;        
+        accP = 0;        
+    }
+    else if(requestG == true) {          
+          loadG.style.display = "block";  
+          loadG.textContent = "Start";
+        loadG.style.marginTop = (window.innerHeight/2) + "px";        
+    }
+    else {
+    myGameArea.clear();
+    object.push(new component(60, 10, "#e0e0e0", Math.floor(Math.random() * myGameArea.canvas.width-myGamePiece.width), lava.y - object.length*100));
+    for(i = 0; i < object.length; i += 1) {
+         myGamePiece.boxColliding(object[i]);
+         if(block.crashWith(object[i])) {
+           object[i].width = 0;
+           object[i].height = 0;
+         }        
+     if(object[i].y > lava.y) {
+         c += 1;
+         object.shift();
+         score.textContent = c;
+     }           
+    }    
+    myGamePiece.newPos();    
+    myGamePiece.update();    
+    accP += 0.0001;    
+    for(i = 0; i < object.length; i += 1) {                    
+      object[i].newPos();
+      object[i].gravitySpeed = 0;
+      object[i].update();
+      object[i].speedY = 1.5 + accP;
+    }
+    if(block.y < lava.y) {
+        block.update();
+    }    
+    if (myGameArea.keys && myGameArea.keys[37]) {moveleft(); }
+    if (myGameArea.keys && myGameArea.keys[39]) {moveright();}
+    myGamePiece.boxColliding(block);
+    block.newPos();
+    block.gravitySpeed = 0;
+    block.speedY = 1.5 + accP;
+    lava.y = myGameArea.canvas.height - lava.height;    
+    lava.update();    
+    force();    
+  }
+  if(corpse == true) {
+        dead = false;
+  }  
+  if(dead == true) {    
+    var die = new Audio("die.wav");
+    die.setAttribute("preload", "auto");
+    die.play();
+    navigator.vibrate([200]);
+    corpse = true;
+ }
+}
+
+function moveleft() {
+    myGamePiece.speedX += -0.2;
+}
+
+function moveright() {
+    myGamePiece.speedX += 0.2;    
+}
+
+function clearmove() {
+    myGamePiece.speedX = 0;
+}
+  
+ </script> 
+ </body>
+</html>

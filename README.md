@@ -18,6 +18,6 @@ Gameplay screenshot from phone.
 * index.html file containing game script
 * Assets used in game including sounds and images
 
-### Also available on itch.io
+### Available on itch.io
 
 [Play Game](https://hyrdaboo.itch.io/square-jump)
